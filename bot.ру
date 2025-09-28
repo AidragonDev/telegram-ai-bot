@@ -1,0 +1,115 @@
+import os
+import logging
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+from openai import OpenAI
+
+# Настройка логирования
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+
+# Токены из переменных окружения
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+
+# Проверка токенов
+if not BOT_TOKEN or not OPENAI_API_KEY:
+    logging.error("❌ Токены не настроены! Проверь переменные окружения.")
+    exit(1)
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /start"""
+    await update.message.reply_text(
+        "🤖 **Привет! Я твой русскоязычный AI-помощник!**\n\n"
+        "Я создан на основе нейросети и готов помочь тебе с:\n"
+        "• Ответами на вопросы\n• Решением задач\n• Творческими идеями\n• И просто общением!\n\n"
+        "**Просто напиши мне что-нибудь, и я отвечу!** 💫"
+    )
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /help"""
+    await update.message.reply_text(
+        "📋 **Доступные команды:**\n\n"
+        "/start - начать общение\n"
+        "/help - показать эту справку\n"
+        "/info - информация о боте\n\n"
+        "**Просто напиши любой текст** - и я дам развернутый ответ на русском языке! 🎯"
+    )
+
+async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик команды /info"""
+    await update.message.reply_text(
+        "ℹ️ **Информация о боте:**\n\n"
+        "• **Имя:** Aidragon AI Assistant\n"
+        "• **Язык:** Русский\n"
+        "• **Технологии:** OpenAI GPT + Telegram API\n"
+        "• **Статус:** Работает стабильно! 🚀\n\n"
+        "Пиши любые вопросы - с радостью помогу! 😊"
+    )
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик всех текстовых сообщений"""
+    try:
+        user_message = update.message.text
+        user_name = update.message.from_user.first_name
+        
+        logging.info(f"📨 Сообщение от {user_name}: {user_message}")
+        
+        # Создаем запрос к OpenAI
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {
+                    "role": "system", 
+                    "content": "Ты дружелюбный русскоязычный AI-помощник в Telegram. Отвечай на русском языке понятно, подробно и с использованием эмодзи. Будь полезным и приветливым."
+                },
+                {
+                    "role": "user", 
+                    "content": user_message
+                }
+            ],
+            max_tokens=800,
+            temperature=0.7
+        )
+        
+        ai_response = response.choices[0].message.content
+        logging.info(f"🤖 Ответ AI: {ai_response[:100]}...")
+        
+        await update.message.reply_text(ai_response)
+        
+    except Exception as e:
+        error_msg = "❌ Извините, произошла ошибка. Попробуйте написать позже."
+        logging.error(f"Ошибка: {e}")
+        await update.message.reply_text(error_msg)
+
+def main():
+    """Основная функция запуска бота"""
+    try:
+        # Создаем приложение
+        application = Application.builder().token(BOT_TOKEN).build()
+        
+        # Добавляем обработчики
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("info", info_command))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        
+        # Запускаем бота
+        logging.info("🟢 Russian AI Bot запускается...")
+        print("=" * 50)
+        print("🤖 БОТ УСПЕШНО ЗАПУЩЕН!")
+        print("📍 Режим: Русский AI-помощник")
+        print("⚡ Статус: Ожидание сообщений...")
+        print("=" * 50)
+        
+        application.run_polling()
+        
+    except Exception as e:
+        logging.error(f"❌ Критическая ошибка при запуске: {e}")
+
+if __name__ == "__main__":
+    main()
