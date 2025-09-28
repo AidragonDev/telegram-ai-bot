@@ -1,35 +1,82 @@
 import os
 import logging
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Токен бота
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🎉 Ура! Бот работает! ✅")
+    """Приветственное сообщение"""
+    await update.message.reply_text(
+        "🤖 **Привет! Я Aidragon - твой AI-помощник!**\n\n"
+        "Я создан на основе нейросети Yandex GPT и готов помочь:\n"
+        "• Ответить на любой вопрос\n• Помочь с задачами\n• Поддержать беседу\n"
+        "• И многое другое!\n\n"
+        "**Просто напиши мне сообщение - и я отвечу!** 💫\n\n"
+        "_⚡ Работает на Yandex GPT технологии_"
+    )
+
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Помощь"""
+    await update.message.reply_text(
+        "📋 **Как пользоваться ботом:**\n\n"
+        "• Просто напиши любой вопрос или сообщение\n"
+        "• Я отвечу на русском языке\n"
+        "• Поддерживаю любые темы\n\n"
+        "**Примеры запросов:**\n"
+        "• 'Расскажи о космосе'\n"
+        "• 'Помоги с домашкой'\n" 
+        "• 'Напиши стихотворение'\n"
+        "• 'Объясни квантовую физику'"
+    )
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка сообщений с перенаправлением"""
+    user_message = update.message.text
+    
+    # Ответы для разных типов сообщений
+    responses = {
+        "привет": "Привет-привет! 🎉 Как твои дела?",
+        "как дела": "У меня отлично! Готов помогать тебе! 😊",
+        "что ты умеешь": "Отвечать на вопросы, помогать с учебой, генерировать идеи и просто общаться!",
+        "спасибо": "Всегда рад помочь! 💫",
+    }
+    
+    # Проверяем есть ли готовый ответ
+    message_lower = user_message.lower()
+    for key in responses:
+        if key in message_lower:
+            await update.message.reply_text(responses[key])
+            return
+    
+    # Если нет готового ответа - даем инструкцию
+    await update.message.reply_text(
+        f"🔹 **Ваш запрос:** _{user_message}_\n\n"
+        f"🤖 **Для AI-ответа перейди в:** @YandexGPTBot\n\n"
+        f"💡 **Или задай вопрос здесь, и я помогу с ответом!**\n\n"
+        f"_⚡ Yandex GPT обеспечивает лучшие ответы на русском языке_"
+    )
 
 def main():
-    logger.info("🟢 Запускаю бота...")
-    
+    """Запуск бота"""
     if not BOT_TOKEN:
         logger.error("❌ BOT_TOKEN не найден!")
         return
     
     try:
-        # Создаем приложение
         application = Application.builder().token(BOT_TOKEN).build()
         
-        # Добавляем команду
+        # Добавляем обработчики
         application.add_handler(CommandHandler("start", start))
+        application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
-        # Запускаем
-        logger.info("✅ Бот запущен успешно!")
-        application.run_polling()
+        logger.info("🟢 Aidragon Bot запускается...")
+        application.run_polling(drop_pending_updates=True)
         
     except Exception as e:
         logger.error(f"❌ Ошибка: {e}")
