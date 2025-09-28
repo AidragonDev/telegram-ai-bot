@@ -1,4 +1,4 @@
-import os
+           import os
 import logging
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
@@ -133,4 +133,4 @@ def main():
         print(f"Детали ошибки: {e}")
 
 if __name__ == "__main__":
-    main()
+    main() 
